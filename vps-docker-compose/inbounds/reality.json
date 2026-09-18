@@ -1,0 +1,26 @@
+{
+  "tag": "VLESS_REALITY",
+  "listen": "0.0.0.0",
+  "port": 8443,
+  "protocol": "vless",
+  "settings": {
+    "clients": [],
+    "decryption": "none"
+  },
+  "streamSettings": {
+    "network": "tcp",
+    "security": "reality",
+    "realitySettings": {
+      "show": false,
+      "dest": "www.microsoft.com:443",
+      "xver": 0,
+      "serverNames": ["www.microsoft.com"],
+      "privateKey": "REPLACE_WITH_YOUR_PRIVATE_KEY",
+      "shortIds": ["REPLACE_WITH_RANDOM_SHORT_ID"]
+    }
+  },
+  "sniffing": {
+    "enabled": true,
+    "destOverride": ["http", "tls", "quic"]
+  }
+}

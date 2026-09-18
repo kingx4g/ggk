@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pasarguard
+      POSTGRES_USER: pasarguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [pasarguard-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pasarguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  panel:
+    image: pasarguard/panel:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SQLALCHEMY_DATABASE_URL: postgresql+asyncpg://pasarguard:${POSTGRES_PASSWORD}@postgres:5432/pasarguard
+      UVICORN_HOST: 0.0.0.0
+      UVICORN_PORT: 8000
+      UVICORN_SSL_CERTFILE: /var/lib/pasarguard/certs/ssl_cert.pem
+      UVICORN_SSL_KEYFILE: /var/lib/pasarguard/certs/ssl_key.pem
+      UVICORN_SSL_CA_TYPE: private
+      ALLOWED_ORIGINS: "*"
+      ENABLE_RECORDING_NODES_STATS: "True"
+    volumes:
+      - panel-data:/var/lib/pasarguard
+      - ./certs/panel:/var/lib/pasarguard/certs:ro
+    ports:
+      - "8000:8000"
+    networks: [pasarguard-net]
+
+  node:
+    image: pasarguard/node:latest
+    restart: unless-stopped
+    environment:
+      API_KEY: ${NODE_API_KEY}
+      NODE_HOST: 0.0.0.0
+      SERVICE_PORT: 62050
+      SSL_CERT_FILE: /var/lib/pg-node/certs/ssl_cert.pem
+      SSL_KEY_FILE: /var/lib/pg-node/certs/ssl_key.pem
+    volumes:
+      - node-data:/var/lib/pg-node
+      - ./certs/node:/var/lib/pg-node/certs:ro
+    ports:
+      - "62050:62050"   # panel <-> node gRPC
+      - "8443:8443"     # optional: VLESS+Reality inbound
+      - "8880:8880"     # optional: VLESS+WS(+TLS via Caddy) inbound
+    networks: [pasarguard-net]
+
+  # اختیاری: فقط اگه یک دامنه‌ی واقعی داری و می‌خوای پنل رو با گواهی معتبر Let's Encrypt در دسترس بذاری.
+  # اگه دامنه نداری، این سرویس رو کامنت کن و مستقیم از https://<IP-سرور>:8000 وارد پنل شو (گواهی خودامضا، نیاز به Accept Risk توی مرورگر).
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [panel]
+    environment:
+      PANEL_DOMAIN: ${PANEL_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+    ports:
+      - "80:80"
+      - "443:443"
+    networks: [pasarguard-net]
+
+networks:
+  pasarguard-net:
+
+volumes:
+  postgres-data:
+  panel-data:
+  node-data:
+  caddy-data:
