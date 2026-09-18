@@ -9,6 +9,8 @@ if [ ! -f "$CERT" ] || [ ! -f "$KEY" ]; then
   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
     -keyout "$KEY" -out "$CERT" -subj "/CN=panel" 2>/dev/null
 fi
+echo ">> در حال آپدیت جدول‌های دیتابیس (migration)..."
+alembic upgrade head || python -m alembic upgrade head
 echo ">> در حال ساخت کد ورود موقت مالک (فقط ۵ دقیقه اعتبار داره؛ توی همین Deploy Logs پیداش کن)..."
 python pasarguard-cli.py generate-temp-key || true
 echo ">> استارت پنل..."
