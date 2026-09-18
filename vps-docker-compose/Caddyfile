@@ -1,7 +1,0 @@
-{$PANEL_DOMAIN} {
-	reverse_proxy panel:8000 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
-}
